@@ -1,0 +1,18 @@
+# Environment variables
+.env
+*.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# React
+node_modules/
+dist/
+
+# Database
+db.sqlite3
+
+# IDE
+.vscode/
