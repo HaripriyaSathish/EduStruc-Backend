@@ -17,7 +17,13 @@ def schedule_list(request):
             schedules = Schedule.objects.all()
         serializer = ScheduleSerializer(schedules, many=True)
         return Response(serializer.data)
-    ...
+
+    elif request.method == 'POST':
+        serializer = ScheduleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
