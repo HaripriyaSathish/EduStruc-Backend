@@ -160,26 +160,30 @@ from .models import User  # adjust import to your actual User model location
 
 token_generator = PasswordResetTokenGenerator()
 
-FRONTEND_URL = "http://localhost:5173"  # adjust if your Vite port differs
+from decouple import config
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
     email = request.data.get('email', '').strip().lower()
+
     if not email:
         return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = User.objects.get(email__iexact=email)
     except User.DoesNotExist:
-        # Always return 200 even if the email doesn't exist, so we don't
-        # leak which emails are registered in the system.
         return Response({'message': 'If that email exists, a reset link has been sent.'})
 
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = token_generator.make_token(user)
-    reset_link = f"{FRONTEND_URL}/reset-password/{uid}/{token}"
+
+    if user.role == 'teacher':
+        reset_link = f"{FRONTEND_URL}/teacher/reset-password/{uid}/{token}"
+    else:
+        reset_link = f"{FRONTEND_URL}/reset-password/{uid}/{token}"
 
     send_mail(
         subject='Reset your EduStruc password',
