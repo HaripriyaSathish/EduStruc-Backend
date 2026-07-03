@@ -30,7 +30,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone            = models.CharField(max_length=15, blank=True)
     job_title        = models.CharField(max_length=100, blank=True)
     timezone         = models.CharField(max_length=100, blank=True, default='Eastern Standard Time (GMT-5)')
-    avatar           = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar_base64    = models.TextField(null=True, blank=True)
     two_fa_enabled   = models.BooleanField(default=False)
     is_active        = models.BooleanField(default=True)
     is_staff         = models.BooleanField(default=False)

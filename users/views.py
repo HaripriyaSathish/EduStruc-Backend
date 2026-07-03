@@ -67,6 +67,8 @@ def profile(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ── Upload Avatar ─────────────────────────────────────────
+import base64
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
@@ -77,8 +79,12 @@ def upload_avatar(request):
     # Validate size (2MB)
     if file.size > 2 * 1024 * 1024:
         return Response({'error': 'File must be under 2MB'}, status=status.HTTP_400_BAD_REQUEST)
-    request.user.avatar = file
+
+    content_type = file.content_type or 'image/jpeg'
+    encoded = base64.b64encode(file.read()).decode('utf-8')
+    request.user.avatar_base64 = f"data:{content_type};base64,{encoded}"
     request.user.save()
+
     return Response({
         'message': 'Avatar uploaded successfully',
         'avatar_url': UserSerializer(request.user, context={'request': request}).data['avatar_url']

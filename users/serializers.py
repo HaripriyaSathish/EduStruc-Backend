@@ -26,11 +26,8 @@ class UserSerializer(serializers.ModelSerializer):
                   'avatar_url', 'is_active', 'created_at']
 
     def get_avatar_url(self, obj):
-        if obj.avatar:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.avatar.url)
-            return obj.avatar.url
+        if obj.avatar_base64:
+         return obj.avatar_base64
         return None
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
