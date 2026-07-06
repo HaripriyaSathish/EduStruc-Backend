@@ -15,10 +15,10 @@ class Student(models.Model):
     academic_year = models.CharField(max_length=20)
     status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     address       = models.TextField(blank=True)
-    avatar = models.ImageField(upload_to='students/avatars/', blank=True, null=True)
+    avatar_base64 = models.TextField(blank=True, null=True)
     parent_name   = models.CharField(max_length=100, blank=True)
     parent_phone  = models.CharField(max_length=15, blank=True)
-    
+
     parent        = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -28,9 +28,6 @@ class Student(models.Model):
     )
     created_at    = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)
-    avatar = models.ImageField(upload_to='student_avatars/', null=True, blank=True)
+
     def __str__(self):
         return f"{self.roll_number} - {self.full_name}"
-    
-
-    
