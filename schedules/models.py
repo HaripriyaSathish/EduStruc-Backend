@@ -15,5 +15,23 @@ class Schedule(models.Model):
     semester     = models.CharField(max_length=20)
     created_at   = models.DateTimeField(auto_now_add=True)
 
+    # New — optional real links, all nullable so existing schedules are unaffected
+    course = models.ForeignKey(
+        'courses.Course', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='schedule_entries'
+    )
+    teacher = models.ForeignKey(
+        'teachers.TeacherProfile', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='schedules'
+    )
+    subject = models.ForeignKey(
+        'teachers.Subject', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='schedules'
+    )
+    grade = models.ForeignKey(
+        'teachers.Grade', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='schedules'
+    )
+
     def __str__(self):
         return f"{self.course_name} - {self.day} {self.start_time}"

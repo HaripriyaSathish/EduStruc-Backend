@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -10,9 +11,13 @@ from .serializers import CourseSerializer
 def course_list(request):
     if request.method == 'GET':
         if request.user.role == 'teacher':
-            courses = Course.objects.filter(
-                instructor=request.user.full_name
-            )
+            profile = getattr(request.user, 'teacher_profile', None)
+            if profile:
+                courses = Course.objects.filter(
+                    Q(teacher=profile) | Q(instructor=request.user.full_name)
+                ).distinct()
+            else:
+                courses = Course.objects.filter(instructor=request.user.full_name)
         else:
             courses = Course.objects.all()
         serializer = CourseSerializer(courses, many=True)
