@@ -7,4 +7,5 @@ urlpatterns = [
     path('my-children/', views.MyChildrenView.as_view(), name='my-children'),
     path('<int:pk>/avatar/', views.StudentAvatarView.as_view(), name='student-avatar'),
     path('<int:pk>/', views.student_detail, name='student-detail'),
+    path('my-students/', views.my_students, name='my-students'),
 ]

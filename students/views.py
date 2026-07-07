@@ -117,3 +117,23 @@ class StudentAvatarView(generics.UpdateAPIView):
         student.save()
 
         return Response({'avatar_url': student.avatar_base64})
+    
+
+from teachers.utils import grade_key
+from teachers.models import TeacherProfile
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_students(request):
+    try:
+        profile = TeacherProfile.objects.get(user=request.user)
+    except TeacherProfile.DoesNotExist:
+        return Response([])
+
+    grade_keys = set(
+        grade_key(sg.grade.name)
+        for sg in profile.subject_grades.select_related('grade').all()
+    )
+    students = [s for s in Student.objects.all() if grade_key(s.class_name) in grade_keys]
+    return Response(StudentSerializer(students, many=True).data)    
