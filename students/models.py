@@ -31,3 +31,19 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.roll_number} - {self.full_name}"
+    
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=Student)
+def notify_student_enrollment(sender, instance, created, **kwargs):
+    if created:
+        from notifications.utils import notify_admins
+        notify_admins(
+            title=f'New Enrollment: {instance.full_name}',
+            message=f'Enrolled in {instance.class_name} - {instance.section or "General"}',
+            type='enrollment',
+            link='/students',
+        )    

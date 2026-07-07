@@ -42,3 +42,19 @@ class SupportTicket(models.Model):
 
     def __str__(self):
         return f'{self.subject} ({self.raised_by.email}) - {self.status}'
+    
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=SupportTicket)
+def notify_new_ticket(sender, instance, created, **kwargs):
+    if created:
+        from notifications.utils import notify_admins
+        notify_admins(
+            title=f'New Support Ticket: {instance.subject}',
+            message=f'Category: {instance.category} • Priority: {instance.priority}',
+            type='alert',
+            link='/support',
+        )    

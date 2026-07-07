@@ -35,3 +35,19 @@ class Schedule(models.Model):
 
     def __str__(self):
         return f"{self.course_name} - {self.day} {self.start_time}"
+    
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+@receiver(post_save, sender=Schedule)
+def notify_schedule_change(sender, instance, created, **kwargs):
+    from notifications.utils import notify_admins
+    action = 'created' if created else 'updated'
+    notify_admins(
+        title=f'Schedule {action.capitalize()}: {instance.course_name}',
+        message=f'{instance.day} {instance.start_time}–{instance.end_time} in {instance.room or "TBD"}',
+        type='schedule',
+        link='/schedules',
+    )    
