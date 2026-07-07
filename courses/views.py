@@ -49,3 +49,37 @@ def course_detail(request, pk):
     elif request.method == 'DELETE':
         course.delete()
         return Response({'message': 'Course deleted'}, status=status.HTTP_204_NO_CONTENT)
+    
+
+import re
+from students.models import Student
+from students.serializers import StudentSerializer
+
+
+def _grade_key(name):
+    """Normalizes 'Grade 9', '9th Grade', 'Kindergarten 1' to a comparable key."""
+    if not name:
+        return ''
+    name = name.lower()
+    m = re.search(r'(\d+)', name)
+    if 'kindergarten' in name or 'kg' in name:
+        return f'kg{m.group(1)}' if m else 'kg'
+    return f'g{m.group(1)}' if m else name.strip()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def course_students(request, pk):
+    try:
+        course = Course.objects.get(pk=pk)
+    except Course.DoesNotExist:
+        return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if course.grade:
+        target = _grade_key(course.grade.name)
+        students = [s for s in Student.objects.all() if _grade_key(s.class_name) == target]
+    else:
+        # No grade linked to this course yet — show everyone as a fallback
+        students = list(Student.objects.all())
+
+    return Response(StudentSerializer(students, many=True).data)    

@@ -1,8 +1,9 @@
 from django.urls import path
-from . import views
+from .views import GradeListView, GradeDetailView, StudentGPAView, BulkGradeSaveView
 
 urlpatterns = [
-    path('', views.GradeListView.as_view(), name='grade-list'),
-    path('<int:pk>/', views.GradeDetailView.as_view(), name='grade-detail'),
-    path('gpa/<int:student_id>/', views.StudentGPAView.as_view(), name='student-gpa'),
+    path('', GradeListView.as_view(), name='grade-list'),
+    path('bulk/', BulkGradeSaveView.as_view(), name='grade-bulk'),
+    path('gpa/<int:student_id>/', StudentGPAView.as_view(), name='student-gpa'),
+    path('<int:pk>/', GradeDetailView.as_view(), name='grade-detail'),
 ]
