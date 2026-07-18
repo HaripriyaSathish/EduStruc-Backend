@@ -1,11 +1,21 @@
+import base64
+import requests
+from decouple import config
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.conf import settings
+
 from .serializers import RegisterSerializer, UserSerializer, UpdateProfileSerializer
 from .models import User
 
@@ -67,8 +77,6 @@ def profile(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ── Upload Avatar ─────────────────────────────────────────
-import base64
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
@@ -76,7 +84,6 @@ def upload_avatar(request):
     if 'avatar' not in request.FILES:
         return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
     file = request.FILES['avatar']
-    # Validate size (2MB)
     if file.size > 2 * 1024 * 1024:
         return Response({'error': 'File must be under 2MB'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -150,24 +157,34 @@ def users_by_role(request, role):
     users = User.objects.filter(role=role)
     return Response(UserSerializer(users, many=True, context={'request': request}).data)
 
-# Add this to users/views.py (or wherever your auth views live)
-
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
-from django.conf import settings
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-
-from .models import User  # adjust import to your actual User model location
-
+# ── Forgot / Reset Password ────────────────────────────────
 token_generator = PasswordResetTokenGenerator()
-
-from decouple import config
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+
+
+def send_reset_email(to_email, full_name, reset_link):
+    """Send the password reset email via Resend's HTTP API (SMTP is blocked on Render free tier)."""
+    response = requests.post(
+        'https://api.resend.com/emails',
+        headers={
+            'Authorization': f'Bearer {RESEND_API_KEY}',
+            'Content-Type': 'application/json',
+        },
+        json={
+            'from': 'EduStruc <onboarding@resend.dev>',  # swap to your verified domain sender once set up in Resend
+            'to': [to_email],
+            'subject': 'Reset your EduStruc password',
+            'html': f'''
+                <p>Hi {full_name},</p>
+                <p>Click the link below to reset your password. This link expires in 1 hour:</p>
+                <p><a href="{reset_link}">{reset_link}</a></p>
+                <p>If you did not request this, you can safely ignore this email.</p>
+            ''',
+        },
+        timeout=8,
+    )
+    response.raise_for_status()
 
 
 @api_view(['POST'])
@@ -191,18 +208,14 @@ def forgot_password(request):
     else:
         reset_link = f"{FRONTEND_URL}/reset-password/{uid}/{token}"
 
-    send_mail(
-        subject='Reset your EduStruc password',
-        message=(
-            f'Hi {user.full_name},\n\n'
-            f'Click the link below to reset your password. This link expires in 1 hour:\n\n'
-            f'{reset_link}\n\n'
-            f'If you did not request this, you can safely ignore this email.'
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    try:
+        send_reset_email(user.email, user.full_name, reset_link)
+    except Exception as e:
+        print('Resend email error:', e)
+        return Response(
+            {'error': 'Could not send reset email. Please try again later.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
     return Response({'message': 'If that email exists, a reset link has been sent.'})
 
